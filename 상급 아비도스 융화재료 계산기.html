@@ -5,7 +5,7 @@
 :root{--bg:#0f1115;--p:#171a21;--p2:#1e222b;--line:#2b313c;--t:#eef2f7;--m:#9ca8b7;--g:#80e4ab;--b:#bdd5ff}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font-family:system-ui,"Noto Sans KR",sans-serif}.wrap{max-width:1180px;margin:auto;padding:28px 18px 50px}h1{font-size:26px;margin:0 0 8px}.sub,.hint,footer{color:var(--m);line-height:1.65}.sub{margin-bottom:22px}.mode-nav{display:flex;gap:8px;margin:0 0 16px}.mode-nav button{width:auto;margin:0;padding:10px 16px;background:#222936;color:var(--m);border:1px solid var(--line)}.mode-nav button.active{background:#dce9ff;color:#11151b;border-color:#dce9ff}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:18px}.card h2{font-size:17px;margin:0 0 14px}.row{display:grid;grid-template-columns:1fr 165px;gap:12px;align-items:center;margin:10px 0}input,select{width:100%;padding:10px 11px;background:#101319;border:1px solid #343c49;border-radius:9px;color:var(--t);font-size:15px}button{width:100%;margin-top:15px;padding:13px;border:0;border-radius:10px;background:#dce9ff;color:#11151b;font-weight:800;font-size:16px;cursor:pointer}.results{margin-top:16px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric,.rule{background:var(--p2);border:1px solid var(--line);border-radius:11px;padding:12px}.metric .k{font-size:12px;color:var(--m)}.metric .v{font-size:22px;font-weight:800;margin-top:5px}.rule{margin:7px 0;background:#12161d;line-height:1.6}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}th,td{padding:11px 9px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}th{color:var(--m)}.recommend{margin-top:15px;background:#101923;border:1px solid #294762;border-radius:12px;padding:18px;line-height:1.85}.recommend b{color:var(--b)}.good{color:var(--g)}footer{margin-top:18px;font-size:12px}@media(max-width:760px){.grid,.summary{grid-template-columns:1fr}.row{grid-template-columns:1fr 130px}}
 </style></head><body><div class="wrap">
 <h1>로스트아크 생활 · 상급 아비도스 융화재료 계산기</h1>
-<div class="sub">생활 콘텐츠와 보유 재료·거래소 가격을 입력하면, 직접 구매와 가루 변환을 비교해 최저 비용 조합을 계산합니다.</div>
+<div class="sub">생활 콘텐츠와 보유 재료·거래소 가격을 입력하면, 변환 효율이 가장 좋은 재료를 중심으로 구매량을 계산합니다. 남는 재료는 다음 제작에 사용할 수 있습니다.</div>
 <nav class="mode-nav" aria-label="계산기 선택"><button id="materialTab" class="active" type="button">생활 재료 계산기</button><button id="crystalTab" type="button">크리스탈 효율 계산기</button><button id="energyTab" type="button">생활의 기운 효율</button></nav>
 <div id="materialPage">
 <div class="grid">
@@ -21,14 +21,96 @@
 </div><script>
 const D={plant:['식물채집','들꽃','수줍은 들꽃','화사한 들꽃','아비도스 들꽃'],lumber:['벌목','목재','부드러운 목재','튼튼한 목재','아비도스 목재',true],mining:['채광','철광석','묵직한 철광석','단단한 철광석','아비도스 철광석',true],hunting:['수렵','두툼한 생고기','다듬은 생고기','오레하 두툼한 생고기','아비도스 두툼한 생고기'],fishing:['낚시','생선','붉은 살 생선','오레하 태양 잉어','아비도스 태양 잉어'],archaeology:['고고학','고대 유물','희귀한 유물','진귀한 유물','아비도스 유물']};
 const $=x=>document.getElementById(x),n=x=>Math.max(0,+$(x).value||0),filled=x=>$(x).value.trim()!=='',f=x=>Math.round(x).toLocaleString('ko-KR'),b=x=>x<=0?0:Math.ceil(x/100)*100,life=()=>D[$('life').value],field=(id,label,ph='0')=>'<div class="row"><label>'+label+'</label><input id="'+id+'" type="number" min="0" placeholder="'+ph+'"></div>';
-function render(){let d=life(),x=!!d[5];$('recipe').textContent=d[4]+' 43 · '+d[2]+' 59 · '+d[1]+' 112';$('have').innerHTML=field('hw',d[1])+field('hs',d[2])+(x?field('hx',d[3]):'')+field('ha',d[4]);$('price').innerHTML=field('pw',d[1],'100개 가격')+field('ps',d[2],'100개 가격')+(x?field('px',d[3],'선택: 100개 가격'):'')+field('pa',d[4],'100개 가격');$('rules').innerHTML='<div class="rule">'+d[1]+' 100 → '+d[0]+'의 가루 80</div><div class="rule">'+d[2]+' 50 → '+d[0]+'의 가루 80</div>'+(x?'<div class="rule">'+d[2]+' 25 → '+d[1]+' 50</div><div class="rule">'+d[3]+' 5 → '+d[1]+' 50</div>':'')+'<div class="rule"><b>'+d[0]+'의 가루 100 → '+d[4]+' 10</b></div>';$('la').textContent=d[4];$('ls').textContent=d[2];$('lw').textContent=d[1];calc()}
-function calc(){let d=life(),special=!!d[5],t=Math.max(1,Math.floor(n('target'))),ra=t*43,rs=t*59,rw=t*112,ha=n('ha'),hs=n('hs'),hw=n('hw'),hx=special?n('hx'):0,sa=Math.max(0,ra-ha),ss=Math.max(0,rs-hs),sw=Math.max(0,rw-hw);$('na').textContent=f(ra);$('ns').textContent=f(rs);$('nw').textContent=f(rw);let q=[[d[1],rw,hw,sw,b(sw)],[d[2],rs,hs,ss,b(ss)]];if(special)q.push([d[3],0,hx,0,0]);q.push([d[4],ra,ha,sa,b(sa)]);$('rows').innerHTML=q.map(v=>'<tr><td>'+v[0]+'</td><td>'+f(v[1])+'</td><td>'+f(v[2])+'</td><td>'+f(v[3])+'</td><td>'+f(v[4])+'</td></tr>').join('');if(!filled('pa')||!filled('ps')||!filled('pw')){$('out').innerHTML='<b>가격을 입력하면 최저 비용을 계산합니다.</b><br>아비도스·고급·일반 재료의 100개 가격을 입력하세요.';return}let pa=n('pa'),ps=n('ps'),pw=n('pw'),px=special&&filled('px')?n('px'):null,max=Math.ceil(Math.ceil(sa/10)*100/80)+4,best;
-  const clamp=(x,limit)=>Math.max(0,Math.min(limit,Math.floor(x)));
-  const consider=(wb,sb,ab,xb)=>{let powder=(wb+sb)*80,made=Math.floor(powder/100)*10,a=b(Math.max(0,sa-made)),s=b(Math.max(0,rs+sb*50+(special?ab*25:0)-hs)),w=b(Math.max(0,rw+wb*100-hw-(special?(ab+xb)*50:0))),xbuy=special&&xb*5>hx?(px===null?Infinity:b(xb*5-hx)):0;if(!isFinite(xbuy))return;let cost=a/100*pa+s/100*ps+w/100*pw+(special?xbuy/100*px:0),z={wb,sb,ab,xb,powder,made,a,s,w,xbuy,cost,left:powder%100};if(!best||cost<best.cost||(cost===best.cost&&a+s+w+xbuy<best.a+best.s+best.w+best.xbuy))best=z};
-  for(let total=0;total<=max;total++)for(let wb=0;wb<=total;wb++){let sb=total-wb,needW=rw+wb*100,baseS=rs+sb*50,abMax=special?Math.ceil(Math.max(0,needW-hw)/50)+2:0,abs=new Set([0,abMax]);if(special){let sPacks=Math.ceil(Math.max(0,baseS+abMax*25-hs)/100)+1;for(let p=0;p<=sPacks;p++){let edge=(hs+p*100-baseS)/25;abs.add(clamp(edge,abMax));abs.add(clamp(edge-1,abMax))}}for(let ab of abs){let remain=Math.max(0,needW-hw-ab*50),xbMax=special?Math.ceil(remain/50)+2:0,xbs=new Set([0,xbMax]);if(special){xbs.add(clamp(hx/5,xbMax));if(px!==null){let xPacks=Math.ceil(Math.max(0,xbMax*5-hx)/100)+1;for(let p=0;p<=xPacks;p++)xbs.add(clamp((hx+p*100)/5,xbMax))}}for(let xb of xbs)consider(wb,sb,ab,xb)}}
-  let z=best,steps=[];if(special&&z.ab)steps.push(d[2]+' <b>'+f(z.ab*25)+'</b>개 → '+d[1]+' <b>'+f(z.ab*50)+'</b>개');if(special&&z.xb)steps.push(d[3]+' <b>'+f(z.xb*5)+'</b>개 → '+d[1]+' <b>'+f(z.xb*50)+'</b>개');if(z.wb)steps.push(d[1]+' <b>'+f(z.wb*100)+'</b>개 → '+d[0]+'의 가루 <b>'+f(z.wb*80)+'</b>개');if(z.sb)steps.push(d[2]+' <b>'+f(z.sb*50)+'</b>개 → '+d[0]+'의 가루 <b>'+f(z.sb*80)+'</b>개');if(z.made)steps.push(d[0]+'의 가루 <b>'+f(z.powder-z.left)+'</b>개 → '+d[4]+' <b>'+f(z.made)+'</b>개');if(z.a)steps.push(d[4]+' <b>'+f(z.a)+'</b>개 직접 구매');$('out').innerHTML='<b>최저 골드 추천</b><br><br>'+(steps.join('<br>')||'추가 변환 또는 구매 불필요')+(z.left?'<br>남는 '+d[0]+'의 가루: <b>'+f(z.left)+'</b>개':'')+'<br><br><span class="good"><b>거래소 최종 구매량</b></span><br>'+d[1]+' <b>'+f(z.w)+'</b>개 · '+d[2]+' <b>'+f(z.s)+'</b>개'+(special?' · '+d[3]+' <b>'+f(z.xbuy)+'</b>개':'')+' · '+d[4]+' <b>'+f(z.a)+'</b>개<br><br>예상 총 비용: <span class="good"><b>'+f(z.cost)+' 골드</b></span>'}
+function render(){let d=life(),x=!!d[5];$('recipe').textContent=d[4]+' 43 · '+d[2]+' 59 · '+d[1]+' 112';$('have').innerHTML=field('hw',d[1])+field('hs',d[2])+(x?field('hx',d[3]):'')+field('ha',d[4]);$('price').innerHTML=field('pw',d[1],'100개 가격')+field('ps',d[2],'100개 가격')+(x?field('px',d[3],'선택: 100개 가격'):'')+field('pa',d[4],'100개 가격');$('rules').innerHTML='<div class="rule">'+d[1]+' 100 → '+d[0]+'의 가루 80</div><div class="rule">'+d[2]+' 50 → '+d[0]+'의 가루 80</div>'+(x?'<div class="rule">'+d[2]+' 25 → '+d[1]+' 50</div><div class="rule">'+d[3]+' 5 → '+d[1]+' 50</div>':'')+'<div class="rule"><b>'+d[0]+'의 가루 100 → '+d[4]+' 10</b></div>';$('la').textContent=d[4];$('ls').textContent=d[2];$('lw').textContent=d[1];simpleCalc()}
+function simpleCalc(){
+  const d=life(),special=!!d[5],target=Math.max(1,Math.floor(n('target')));
+  const needA=target*43,needS=target*59,needW=target*112;
+  const haveA=n('ha'),haveS=n('hs'),haveW=n('hw'),haveX=special?n('hx'):0;
+  $('na').textContent=f(needA);$('ns').textContent=f(needS);$('nw').textContent=f(needW);
+  const rows=[[d[1],needW,haveW],[d[2],needS,haveS]];
+  if(special)rows.push([d[3],0,haveX]);
+  rows.push([d[4],needA,haveA]);
+  $('rows').innerHTML=rows.map(([name,need,have])=>'<tr><td>'+name+'</td><td>'+f(need)+'</td><td>'+f(have)+'</td><td>'+f(Math.max(0,need-have))+'</td><td>'+f(b(Math.max(0,need-have)))+'</td></tr>').join('');
+  if(!filled('pa')||!filled('ps')||!filled('pw')){
+    $('out').innerHTML='<b>가격을 입력하면 추천을 계산합니다.</b><br>일반·고급·아비도스 재료의 100개 가격을 입력하세요.';
+    return;
+  }
+  const prices={w:n('pw'),s:n('ps'),a:n('pa'),x:special&&filled('px')?n('px'):null};
+  const bought={w:0,s:0,x:0,a:0},steps=[];
+  let w=haveW,s=haveS,x=haveX,powder=0,madeA=0;
+  const buy=(kind,quantity)=>{const amount=b(quantity);bought[kind]+=amount;return amount};
+  const sCraftBuy=buy('s',Math.max(0,needS-s));s+=sCraftBuy;s-=needS;
+  const normalShort=()=>Math.max(0,needW-w);
+  if(special){
+    const rareBatches=Math.min(Math.floor(x/5),Math.ceil(normalShort()/50));
+    if(rareBatches){x-=rareBatches*5;w+=rareBatches*50;steps.push(d[3]+' '+f(rareBatches*5)+'개 → '+d[1]+' '+f(rareBatches*50)+'개 (보유분)')}
+    const advancedBatches=Math.min(Math.floor(s/25),Math.ceil(normalShort()/50));
+    if(advancedBatches){s-=advancedBatches*25;w+=advancedBatches*50;steps.push(d[2]+' '+f(advancedBatches*25)+'개 → '+d[1]+' '+f(advancedBatches*50)+'개 (남는 보유분)')}
+  }
+  if(normalShort()){
+    const sources=[{kind:'w',unit:prices.w/100}];
+    if(special){
+      sources.push({kind:'s',unit:prices.s/200});
+      if(prices.x!==null)sources.push({kind:'x',unit:prices.x/1000});
+    }
+    sources.sort((a,b)=>a.unit-b.unit);
+    const source=sources[0].kind,short=normalShort();
+    if(source==='w')w+=buy('w',short);
+    else if(source==='s'){
+      const count=Math.ceil(short/50);
+      s+=buy('s',Math.max(0,count*25-s));s-=count*25;w+=count*50;
+      steps.push(d[2]+' '+f(count*25)+'개 → '+d[1]+' '+f(count*50)+'개');
+    }else{
+      const count=Math.ceil(short/50);
+      x+=buy('x',Math.max(0,count*5-x));x-=count*5;w+=count*50;
+      steps.push(d[3]+' '+f(count*5)+'개 → '+d[1]+' '+f(count*50)+'개');
+    }
+    steps.push('제작용 '+d[1]+'은 '+d[source==='w'?1:source==='s'?2:3]+' 구매 경로로 확보');
+  }
+  w-=needW;
+  const avidShort=Math.max(0,needA-haveA);
+  if(avidShort){
+    const powderSources=[{kind:'w',per80:prices.w},{kind:'s',per80:prices.s/2}];
+    if(special&&prices.x!==null)powderSources.push({kind:'x',per80:prices.x/10});
+    powderSources.sort((a,b)=>a.per80-b.per80);
+    const source=powderSources[0];
+    const requiredPowder=Math.ceil(avidShort/10)*100;
+    const ownedPowder=80*(Math.floor(w/100)+Math.floor(s/50)+(special?Math.floor(x/10):0));
+    if(ownedPowder>=requiredPowder||source.per80*1.25<prices.a/10){
+      const take=(kind,units)=>{const count=Math.min(Math.floor(({w,s,x})[kind]/units),Math.ceil((requiredPowder-powder)/80));if(!count)return 0;if(kind==='w')w-=count*units;else if(kind==='s')s-=count*units;else x-=count*units;powder+=count*80;return count};
+      const ownedW=take('w',100),ownedS=take('s',50),ownedX=special?take('x',10):0;
+      if(ownedW)steps.push(d[1]+' '+f(ownedW*100)+'개 → '+d[0]+'의 가루 '+f(ownedW*80)+'개 (보유분)');
+      if(ownedS)steps.push(d[2]+' '+f(ownedS*50)+'개 → '+d[0]+'의 가루 '+f(ownedS*80)+'개 (보유분)');
+      if(ownedX)steps.push(d[3]+' '+f(ownedX*10)+'개 → '+d[1]+' → '+d[0]+'의 가루 '+f(ownedX*80)+'개 (보유분)');
+      const count=Math.ceil(Math.max(0,requiredPowder-powder)/80);
+      if(count){
+        const unit=source.kind==='w'?100:source.kind==='s'?50:10;
+        const key=source.kind;
+        const current=key==='w'?w:key==='s'?s:x;
+        const amount=buy(key,Math.max(0,count*unit-current));
+        if(key==='w')w+=amount-count*unit;
+        else if(key==='s')s+=amount-count*unit;
+        else x+=amount-count*unit;
+        powder+=count*80;
+        steps.push(d[key==='w'?1:key==='s'?2:3]+' '+f(count*unit)+'개 → '+d[0]+'의 가루 '+f(count*80)+'개');
+      }
+      madeA=Math.floor(powder/100)*10;
+      steps.push(d[0]+'의 가루 '+f(Math.floor(powder/100)*100)+'개 → '+d[4]+' '+f(madeA)+'개');
+    }else{
+      buy('a',avidShort);
+      steps.push(d[4]+' 직접 구매');
+    }
+  }
+  const cost=bought.w/100*prices.w+bought.s/100*prices.s+bought.a/100*prices.a+(special?bought.x/100*(prices.x||0):0);
+  const leftovers=[[d[1],w],[d[2],s],...(special?[[d[3],x]]:[]),[d[4],haveA+madeA+bought.a-needA],...(powder%100?[[d[0]+'의 가루',powder%100]]:[])].filter(([,amount])=>amount>0);
+  $('out').innerHTML='<b>저렴한 재료 중심 구매 추천</b><br>변환 효율을 반영해 각 용도에서 단가가 가장 낮은 구매 경로를 사용합니다. 100개 단위 구매 후 남는 재료는 다음 제작에 사용할 수 있습니다.<br><br>'+
+    (steps.length?steps.join('<br>')+'<br><br>':'')+
+    '<span class="good"><b>거래소 구매량</b></span><br>'+d[1]+' <b>'+f(bought.w)+'</b>개 · '+d[2]+' <b>'+f(bought.s)+'</b>개'+(special?' · '+d[3]+' <b>'+f(bought.x)+'</b>개':'')+' · '+d[4]+' <b>'+f(bought.a)+'</b>개<br>'+
+    '이번 구매액: <span class="good"><b>'+f(cost)+' 골드</b></span><br>'+
+    '남는 재료: '+(leftovers.length?leftovers.map(([name,amount])=>name+' <b>'+f(amount)+'</b>개').join(' · '):'없음');
+}
 document.querySelectorAll('#crystalPage').forEach((page,index)=>{if(index>0)page.remove()});
-$('life').innerHTML=Object.entries(D).map(x=>'<option value="'+x[0]+'">'+x[1][0]+'</option>').join('');$('life').onchange=render;$('calc').onclick=calc;render();
+$('life').innerHTML=Object.entries(D).map(x=>'<option value="'+x[0]+'">'+x[1][0]+'</option>').join('');$('life').onchange=render;$('calc').onclick=simpleCalc;render();
 function crystalCalc(){let goldCost=n('crGoldCost'),goldCrystal=n('crGoldAmount'),packWon=n('packageWon'),packCrystal=n('packageCrystal'),tradeWon=n('tradeWon'),tradeGold=n('tradeGold');if(!goldCost||!goldCrystal||!packWon||!packCrystal){return}let packageUnit=packWon/packCrystal;$('packageUnit').textContent=packageUnit.toFixed(2)+'원';if(!tradeWon||!tradeGold){$('tradeUnit').textContent='-';$('netGold').textContent='-';$('crystalOut').textContent='유저거래 금액과 거래 골드를 입력하면 효율을 비교합니다.';energyCalc();return}let netGold=tradeGold*.95,tradeCrystal=netGold/goldCost*goldCrystal,tradeUnit=tradeWon/tradeCrystal,better=packageUnit<tradeUnit?'크리스탈 패키지':'유저거래 후 골드로 구매',cheap=Math.min(packageUnit,tradeUnit),expensive=Math.max(packageUnit,tradeUnit),diff=(expensive/cheap-1)*100,samePackage=tradeUnit*packCrystal;$('tradeUnit').textContent=tradeUnit.toFixed(2)+'원';$('netGold').textContent=f(netGold)+'골드';$('crystalOut').innerHTML='<b>'+better+' 경로가 더 유리합니다.</b><br>패키지: 크리스탈 1개당 <b>'+packageUnit.toFixed(2)+'원</b> · 유저거래 경로: 1개당 <b>'+tradeUnit.toFixed(2)+'원</b><br>더 비싼 경로 대비 <span class="good"><b>'+diff.toFixed(1)+'%</b> 절약</span>됩니다.<br><br>패키지와 같은 '+f(packCrystal)+'크리스탈을 유저거래 경로로 마련하면 약 <b>'+f(samePackage)+'원</b>이 필요합니다.';energyCalc()}
 ['crGoldCost','crGoldAmount','packageWon','packageCrystal','tradeWon','tradeGold'].forEach(id=>$(id).addEventListener('input',crystalCalc));crystalCalc();
 function energyCalc(){let goldCost=n('crGoldCost'),goldCrystal=n('crGoldAmount'),tradeWon=n('tradeWon'),tradeGold=n('tradeGold'),mariCrystal=n('mariCrystal'),mariPotion=n('mariPotion'),energy=n('potionEnergy'),packageWon=n('energyPackageWon'),packagePotion=n('energyPackagePotion');if(!tradeWon||!tradeGold||!goldCost||!goldCrystal){$('mariUnit').textContent='-';$('energyPackageUnit').textContent=packageWon&&packagePotion?(packageWon/packagePotion).toFixed(0)+'원':'-';$('mariEnergyUnit').textContent='-';$('energyOut').textContent='크리스탈 효율 계산기에서 유저거래 금액과 거래 골드를 입력하면 마리샵 효율을 비교합니다.';return}let crystalUnit=tradeWon/(tradeGold*.95/goldCost*goldCrystal),mariUnit=mariCrystal*crystalUnit/mariPotion,packageUnit=packageWon/packagePotion,mariEnergy=mariUnit/energy*1000,packageEnergy=packageUnit/energy*1000,better=mariUnit<packageUnit?'마리의 비밀 상점':'현금 패키지',cheap=Math.min(mariUnit,packageUnit),diff=(Math.max(mariUnit,packageUnit)/cheap-1)*100;$('mariUnit').textContent=mariUnit.toFixed(0)+'원';$('energyPackageUnit').textContent=packageUnit.toFixed(0)+'원';$('mariEnergyUnit').textContent=mariEnergy.toFixed(0)+'원';$('energyOut').innerHTML='<b>'+better+'이 더 유리합니다.</b><br>마리샵: 물약 1개당 <b>'+mariUnit.toFixed(0)+'원</b> · 생기 1,000당 <b>'+mariEnergy.toFixed(0)+'원</b><br>현금 패키지: 물약 1개당 <b>'+packageUnit.toFixed(0)+'원</b> · 생기 1,000당 <b>'+packageEnergy.toFixed(0)+'원</b><br>더 비싼 경로 대비 <span class="good"><b>'+diff.toFixed(1)+'%</b> 절약</span>됩니다.'}
