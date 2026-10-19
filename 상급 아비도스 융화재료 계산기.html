@@ -36,16 +36,17 @@ function simpleCalc(){
     return;
   }
   const prices={w:n('pw'),s:n('ps'),a:n('pa'),x:special&&filled('px')?n('px'):null};
-  const bought={w:0,s:0,x:0,a:0},steps=[];
+  const bought={w:0,s:0,x:0,a:0};
+  const exchanged={sToW:0,xToW:0,wToP:0,sToP:0,pToA:0};
   let w=haveW,s=haveS,x=haveX,powder=0,madeA=0;
   const buy=(kind,quantity)=>{const amount=b(quantity);bought[kind]+=amount;return amount};
   const sCraftBuy=buy('s',Math.max(0,needS-s));s+=sCraftBuy;s-=needS;
   const normalShort=()=>Math.max(0,needW-w);
   if(special){
     const rareBatches=Math.min(Math.floor(x/5),Math.ceil(normalShort()/50));
-    if(rareBatches){x-=rareBatches*5;w+=rareBatches*50;steps.push(d[3]+' '+f(rareBatches*5)+'개 → '+d[1]+' '+f(rareBatches*50)+'개 (보유분)')}
+    if(rareBatches){x-=rareBatches*5;w+=rareBatches*50;exchanged.xToW+=rareBatches*5}
     const advancedBatches=Math.min(Math.floor(s/25),Math.ceil(normalShort()/50));
-    if(advancedBatches){s-=advancedBatches*25;w+=advancedBatches*50;steps.push(d[2]+' '+f(advancedBatches*25)+'개 → '+d[1]+' '+f(advancedBatches*50)+'개 (남는 보유분)')}
+    if(advancedBatches){s-=advancedBatches*25;w+=advancedBatches*50;exchanged.sToW+=advancedBatches*25}
   }
   if(normalShort()){
     const sources=[{kind:'w',unit:prices.w/100}];
@@ -59,13 +60,12 @@ function simpleCalc(){
     else if(source==='s'){
       const count=Math.ceil(short/50);
       s+=buy('s',Math.max(0,count*25-s));s-=count*25;w+=count*50;
-      steps.push(d[2]+' '+f(count*25)+'개 → '+d[1]+' '+f(count*50)+'개');
+      exchanged.sToW+=count*25;
     }else{
       const count=Math.ceil(short/50);
       x+=buy('x',Math.max(0,count*5-x));x-=count*5;w+=count*50;
-      steps.push(d[3]+' '+f(count*5)+'개 → '+d[1]+' '+f(count*50)+'개');
+      exchanged.xToW+=count*5;
     }
-    steps.push('제작용 '+d[1]+'은 '+d[source==='w'?1:source==='s'?2:3]+' 구매 경로로 확보');
   }
   w-=needW;
   const avidShort=Math.max(0,needA-haveA);
@@ -79,9 +79,9 @@ function simpleCalc(){
     if(ownedPowder>=requiredPowder||source.per80*1.25<prices.a/10){
       const take=(kind,units)=>{const count=Math.min(Math.floor(({w,s,x})[kind]/units),Math.ceil((requiredPowder-powder)/80));if(!count)return 0;if(kind==='w')w-=count*units;else if(kind==='s')s-=count*units;else x-=count*units;powder+=count*80;return count};
       const ownedW=take('w',100),ownedS=take('s',50),ownedX=special?take('x',10):0;
-      if(ownedW)steps.push(d[1]+' '+f(ownedW*100)+'개 → '+d[0]+'의 가루 '+f(ownedW*80)+'개 (보유분)');
-      if(ownedS)steps.push(d[2]+' '+f(ownedS*50)+'개 → '+d[0]+'의 가루 '+f(ownedS*80)+'개 (보유분)');
-      if(ownedX)steps.push(d[3]+' '+f(ownedX*10)+'개 → '+d[1]+' → '+d[0]+'의 가루 '+f(ownedX*80)+'개 (보유분)');
+      exchanged.wToP+=ownedW*100+ownedX*100;
+      exchanged.sToP+=ownedS*50;
+      exchanged.xToW+=ownedX*10;
       const count=Math.ceil(Math.max(0,requiredPowder-powder)/80);
       if(count){
         const unit=source.kind==='w'?100:source.kind==='s'?50:10;
@@ -92,22 +92,31 @@ function simpleCalc(){
         else if(key==='s')s+=amount-count*unit;
         else x+=amount-count*unit;
         powder+=count*80;
-        steps.push(d[key==='w'?1:key==='s'?2:3]+' '+f(count*unit)+'개 → '+d[0]+'의 가루 '+f(count*80)+'개');
+        if(key==='w')exchanged.wToP+=count*100;
+        else if(key==='s')exchanged.sToP+=count*50;
+        else{exchanged.xToW+=count*10;exchanged.wToP+=count*100}
       }
       madeA=Math.floor(powder/100)*10;
-      steps.push(d[0]+'의 가루 '+f(Math.floor(powder/100)*100)+'개 → '+d[4]+' '+f(madeA)+'개');
+      exchanged.pToA=Math.floor(powder/100)*100;
     }else{
       buy('a',avidShort);
-      steps.push(d[4]+' 직접 구매');
     }
   }
   const cost=bought.w/100*prices.w+bought.s/100*prices.s+bought.a/100*prices.a+(special?bought.x/100*(prices.x||0):0);
   const leftovers=[[d[1],w],[d[2],s],...(special?[[d[3],x]]:[]),[d[4],haveA+madeA+bought.a-needA],...(powder%100?[[d[0]+'의 가루',powder%100]]:[])].filter(([,amount])=>amount>0);
-  $('out').innerHTML='<b>저렴한 재료 중심 구매 추천</b><br>변환 효율을 반영해 각 용도에서 단가가 가장 낮은 구매 경로를 사용합니다. 100개 단위 구매 후 남는 재료는 다음 제작에 사용할 수 있습니다.<br><br>'+
-    (steps.length?steps.join('<br>')+'<br><br>':'')+
-    '<span class="good"><b>거래소 구매량</b></span><br>'+d[1]+' <b>'+f(bought.w)+'</b>개 · '+d[2]+' <b>'+f(bought.s)+'</b>개'+(special?' · '+d[3]+' <b>'+f(bought.x)+'</b>개':'')+' · '+d[4]+' <b>'+f(bought.a)+'</b>개<br>'+
-    '이번 구매액: <span class="good"><b>'+f(cost)+' 골드</b></span><br>'+
-    '남는 재료: '+(leftovers.length?leftovers.map(([name,amount])=>name+' <b>'+f(amount)+'</b>개').join(' · '):'없음');
+  const purchases=[[d[1],bought.w],[d[2],bought.s],...(special?[[d[3],bought.x]]:[]),[d[4],bought.a]].filter(([,amount])=>amount>0);
+  const powderName=d[0]+'의 가루';
+  const exchangeLines=[
+    exchanged.sToW&&d[2]+' <b>'+f(exchanged.sToW)+'</b>개 → '+d[1]+' <b>'+f(exchanged.sToW*2)+'</b>개',
+    exchanged.xToW&&d[3]+' <b>'+f(exchanged.xToW)+'</b>개 → '+d[1]+' <b>'+f(exchanged.xToW*10)+'</b>개',
+    exchanged.wToP&&d[1]+' <b>'+f(exchanged.wToP)+'</b>개 → '+powderName+' <b>'+f(exchanged.wToP/100*80)+'</b>개',
+    exchanged.sToP&&d[2]+' <b>'+f(exchanged.sToP)+'</b>개 → '+powderName+' <b>'+f(exchanged.sToP/50*80)+'</b>개',
+    exchanged.pToA&&powderName+' <b>'+f(exchanged.pToA)+'</b>개 → '+d[4]+' <b>'+f(madeA)+'</b>개'
+  ].filter(Boolean);
+  $('out').innerHTML='<b>구매</b> '+(purchases.length?purchases.map(([name,amount])=>name+' <b>'+f(amount)+'</b>개').join(' · '):'없음')+
+    (exchangeLines.length?'<br><br><b>교환</b><br>'+exchangeLines.join('<br>'):'')+
+    '<br><br><b>남음</b> '+(leftovers.length?leftovers.map(([name,amount])=>name+' <b>'+f(amount)+'</b>개').join(' · '):'없음')+
+    '<br><b>구매액</b> <span class="good"><b>'+f(cost)+' 골드</b></span>';
 }
 document.querySelectorAll('#crystalPage').forEach((page,index)=>{if(index>0)page.remove()});
 $('life').innerHTML=Object.entries(D).map(x=>'<option value="'+x[0]+'">'+x[1][0]+'</option>').join('');$('life').onchange=render;$('calc').onclick=simpleCalc;render();
